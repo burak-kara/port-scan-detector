@@ -11,7 +11,7 @@ import dpkt, pcap
 import struct
 import socket
 import time
-import threading
+# import threading
 import optparse
 
 
@@ -37,7 +37,7 @@ get_timestamp = lambda : time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
 
 class ScanEntry(object):
     """ Port scan entry """
-    
+
     def __init__(self, hash):
         self.src = 0
         self.dst = 0
@@ -69,7 +69,7 @@ class EntryLog(dict):
             if self.oldest:
                 self.__delitem__(self.oldest.hash)
                 self.oldest = self.oldest.next
-        
+
         super(EntryLog, self).__setitem__(key,value)
 
         if self.last:
@@ -79,7 +79,7 @@ class EntryLog(dict):
             self.last = value
             self.oldest = self.last
 
-    
+
 class TimerList(list):
     """ List class of fixed size with entries that time out automatically """
 
@@ -88,7 +88,7 @@ class TimerList(list):
             raise NotImplementedError
         else:
             return super(TimerList, self).__getattribute__(name)
-        
+
     def __init__(self, maxsz, ttl):
         # Maximum size
         self.maxsz = maxsz
@@ -108,17 +108,17 @@ class TimerList(list):
                 super(TimerList, self).append((time.time(), item))
             else:
                 raise ValueError,'could not append item'
-            
+
     def collect(self):
         """ Collect and remove aged items """
-        
+
         t=time.time()
         old = []
         for item in self:
             if (t-item[0])>self.ttl:
                 old.append(item)
 
-        
+
         for item in old:
             self.remove(item)
 
@@ -140,10 +140,10 @@ class TimerList(list):
 
         items = [rest for (tstamp,rest) in self]
         return item in items
-    
+
 class ScanLogger(object):
     """ Port scan detector/logger """
-    
+
     # TCP flags to scan type mapping
     scan_types = {0: 'TCP null',
                   TH_FIN: 'TCP fin',
@@ -153,8 +153,8 @@ class ScanLogger(object):
                   TH_SYN|TH_FIN: 'TCP syn/fin',
                   TH_FIN|TH_ACK: 'TCP fin/ack',
                   TH_SYN|TH_ACK|TH_RST: 'TCP full-connect',
-                  TH_URG|TH_PSH|TH_ACK|TH_RST|TH_SYN|TH_FIN: 'TCP all-flags' } 
-                  
+                  TH_URG|TH_PSH|TH_ACK|TH_RST|TH_SYN|TH_FIN: 'TCP all-flags' }
+
     def __init__(self, timeout, threshold, maxsize, daemon=True, logfile='/var/log/scanlog'):
         self.scans = EntryLog(maxsize)
         # Port scan weight threshold
@@ -169,7 +169,7 @@ class ScanLogger(object):
         except (IOError, OSError), (errno, strerror):
             print "Error opening scan log file %s => %s" % (logfile, strerror)
             self.scanlog = None
-            
+
         # Recent scans - this list allows to keep scan information
         # upto last 'n' seconds, so as to not call duplicate scans
         # in the same time-period. 'n' is 60 sec by default.
@@ -178,18 +178,18 @@ class ScanLogger(object):
         # to maximum such entries possible in 60 sec - assuming
         # a scan occurs at most every 5 seconds, this would be 12.
         self.recent_scans = TimerList(12, 60.0)
-        
+
     def hash_func(self, addr):
         """ Hash a host address """
-        
+
         value = addr
         h = 0
-    
+
         while value:
             # print value
             h ^= value
             value = value >> 9
-        
+
         return h & (8192-1)
 
     def host_hash(self, src, dst):
@@ -202,7 +202,7 @@ class ScanLogger(object):
 
         srcip, dstip = socket.inet_ntoa(struct.pack('I',scan.src)), socket.inet_ntoa(struct.pack('I',scan.dst))
         ports = ','.join([str(port) for port in scan.ports])
-        
+
         if not continuation:
             line = '[%s]: %s scan (flags:%d) from %s to %s (ports:%s)' % (get_timestamp(),
                                                                           scan.type,
@@ -216,14 +216,14 @@ class ScanLogger(object):
                                                                                srcip,
                                                                                dstip,
                                                                                ports)
-                                                                             
+
         if self.scanlog:
             self.scanlog.write(line + '\n')
             self.scanlog.flush()
 
         if not self.daemon:
             print line
-                  
+
     def process(self, pkt):
 
         if not hasattr(pkt, 'ip'):
@@ -237,7 +237,7 @@ class ScanLogger(object):
         pload = ip.data
         src,dst,dport,flags = int(struct.unpack('I',ip.src)[0]),int(struct.unpack('I', ip.dst)[0]),int(pload.dport),0
         proto = type(pload)
-        
+
         if proto == TCP: flags = pload.flags
         key = self.host_hash(src,dst)
 
@@ -245,27 +245,27 @@ class ScanLogger(object):
 
         # Keep dropping old entries
         self.recent_scans.collect()
-        
+
         if key in self.scans:
             scan = self.scans[key]
 
             if scan.src != src:
                 # Skip packets in reverse direction or invalid protocol
                 return
-                
+
             # Update only if not too old, else skip and remove entry
             if curr - scan.timestamp > self.timeout:
                 del self.scans[key]
                 return
 
             if scan.logged: return
-            
+
             # Update TCP flags if existing port
             if dport in scan.ports:
                 # Same port, update flags
                 scan.tcpflags_or |= flags
                 return
-                
+
             scan.timestamp = curr
             scan.tcpflags_or |= flags
             scan.ports.append(dport)
@@ -275,7 +275,7 @@ class ScanLogger(object):
                 scan.weight += 3
             else:
                 scan.weight += 1
-            
+
             if scan.weight>=self.threshold:
                 scan.logged = True
                 if proto==TCP:
@@ -284,16 +284,16 @@ class ScanLogger(object):
                     scan.type = 'UDP'
                     # Reset flags for UDP scan
                     scan.tcpflags_or = 0
-                    
+
                 # See if this was logged recently
                 scanentry = (key, scan.type, scan.tcpflags_or)
-                
+
                 if scanentry not in self.recent_scans:
                     self.log_scan(scan)
                     self.recent_scans.append(scanentry)
                 else:
                     self.log_scan(scan, True)
-                        
+
         else:
             # Add new entry
             scan = ScanEntry(key)
@@ -303,23 +303,23 @@ class ScanLogger(object):
             scan.tcpflags_or |= flags
             scan.ports.append(dport)
             self.scans[key] = scan
-            
+
     def log(self):
-        
+
         pc = pcap.pcap()
         decode = { pcap.DLT_LOOP:dpkt.loopback.Loopback,
                    pcap.DLT_NULL:dpkt.loopback.Loopback,
                    pcap.DLT_EN10MB:dpkt.ethernet.Ethernet } [pc.datalink()]
 
-        try:
-            print 'listening on %s: %s' % (pc.name, pc.filter)
-            for ts, pkt in pc:
-                self.process(decode(pkt))
-        except KeyboardInterrupt:
-            if not self.daemon:
-                nrecv, ndrop, nifdrop = pc.stats()
-                print '\n%d packets received by filter' % nrecv
-                print '%d packets dropped by kernel' % ndrop
+        # try:
+        print 'listening on %s: %s' % (pc.name, pc.filter)
+        for ts, pkt in pc:
+            self.process(decode(pkt))
+        # except KeyboardInterrupt:
+            #if not self.daemon:
+                # nrecv, ndrop, nifdrop = pc.stats()
+                # print '\n%d packets received by filter' % nrecv
+                # print '%d packets dropped by kernel' % ndrop
 
     def run_daemon(self):
         # Disconnect from tty
@@ -343,9 +343,9 @@ class ScanLogger(object):
         except OSError, e:
             print >>sys.stderr, "fork #2 failed", e
             sys.exit(1)
-            
+
         self.log()
-        
+
     def run(self):
         # If dameon, then create a new thread and wait for it
         if self.daemon:
@@ -356,19 +356,28 @@ class ScanLogger(object):
             self.log()
 
 def main():
-    
+
     if os.geteuid() != 0:
         sys.exit("You must be super-user to run this program")
-        
+
     o=optparse.OptionParser()
     o.add_option("-d", "--daemonize", dest="daemon", help="Daemonize",
                  action="store_true", default=False)
     o.add_option("-f", "--logfile", dest="logfile", help="File to save logs to",
                  default="/var/log/scanlog")
-    
+
     options, args = o.parse_args()
     s=ScanLogger(SCAN_TIMEOUT, WEIGHT_THRESHOLD, 8192, options.daemon, options.logfile)
     s.run()
-    
+
 if __name__ == '__main__':
-    main()
+    try:
+        while True:
+            try:
+                main()
+            except TypeError:
+                time.sleep(0.25)
+                print "Continue to start the Pyscanlogger"
+                continue
+    except KeyboardInterrupt:
+        print "Stop the Pyscanlogger!"
