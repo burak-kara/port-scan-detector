@@ -1,34 +1,29 @@
 #!/usr/bin/env python
 """
-pyscanlogger: Simple port scan detector/logger tool, inspired
-by scanlogd {http://www.openwall.com/scanlogd}
-
-
+pyscanlogger3: Simple port scan detector/logger tool in python3, inspired
+by pyscanlogger {https://github.com/John-Lin/pyscanlogger}
 """
 
-# import threading
-import optparse
 import os
-import socket
-import struct
 import sys
 import time
 import dpkt
 import pcap
-
-# UDP - in progress...
+import struct
+import socket
+import optparse
 
 SCAN_TIMEOUT = 5
 WEIGHT_THRESHOLD = 25
 PIDFILE = "/var/run/pyscanlogger.pid"
 
-# TCP flag constants
-TH_URG = dpkt.tcp.TH_URG
-TH_ACK = dpkt.tcp.TH_ACK
-TH_PSH = dpkt.tcp.TH_PUSH
-TH_RST = dpkt.tcp.TH_RST
-TH_SYN = dpkt.tcp.TH_SYN
-TH_FIN = dpkt.tcp.TH_FIN
+# tcp control flag constants
+TH_FIN = dpkt.tcp.TH_FIN  # end of data
+TH_SYN = dpkt.tcp.TH_SYN  # synchronize sequence numbers
+TH_RST = dpkt.tcp.TH_RST  # reset connection
+TH_PSH = dpkt.tcp.TH_PUSH  # push
+TH_ACK = dpkt.tcp.TH_ACK  # acknowledgment number set
+TH_URG = dpkt.tcp.TH_URG  # urgent pointer set
 
 # Protocols
 TCP = dpkt.tcp.TCP
@@ -110,7 +105,7 @@ class TimerList(list):
                 # Some items removed, so append
                 super(TimerList, self).append((time.time(), item))
             else:
-                raise ValueError, 'could not append item'
+                raise ValueError('could not append item')
 
     def collect(self):
         """ Collect and remove aged items """
@@ -136,10 +131,9 @@ class TimerList(list):
         if type(item) == tuple and len(item) == 2 and type(item[0]) == float and item[0] >= time.time():
             super(TimerList, self).__setitem__(index, item)
         else:
-            raise TypeError, 'invalid entry'
+            raise TypeError('invalid entry')
 
     def __contains__(self, item):
-
         items = [rest for (tstamp, rest) in self]
         return item in items
 
@@ -171,8 +165,8 @@ class ScanLogger(object):
         # Log file
         try:
             self.scanlog = open(logfile, 'a')
-        except (IOError, OSError), (errno, strerror):
-            print "Error opening scan log file %s => %s" % (logfile, strerror)
+        except (IOError, OSError) as e:
+            print("Error opening scan log file", e)
             self.scanlog = None
 
         # Recent scans - this list allows to keep scan information
@@ -227,7 +221,7 @@ class ScanLogger(object):
             self.scanlog.flush()
 
         if not self.daemon:
-            print line
+            print(line)
 
     def process(self, pkt):
 
@@ -318,7 +312,7 @@ class ScanLogger(object):
                   pcap.DLT_EN10MB: dpkt.ethernet.Ethernet}[pc.datalink()]
 
         # try:
-        print 'listening on %s: %s' % (pc.name, pc.filter)
+        print('listening on %s: %s' % (pc.name, pc.filter))
         for ts, pkt in pc:
             self.process(decode(pkt))
         # except KeyboardInterrupt:
@@ -333,8 +327,8 @@ class ScanLogger(object):
             pid = os.fork()
             if pid > 0:
                 sys.exit(0)
-        except OSError, e:
-            print >> sys.stderr, "fork #1 failed", e
+        except OSError as e:
+            print(sys.stderr, "fork #1 failed", e)
             sys.exit(1)
 
         os.setsid()
@@ -346,16 +340,16 @@ class ScanLogger(object):
             if pid > 0:
                 open(PIDFILE, 'w').write(str(pid))
                 sys.exit(0)
-        except OSError, e:
-            print >> sys.stderr, "fork #2 failed", e
+        except OSError as e:
+            print(sys.stderr, "fork #2 failed", e)
             sys.exit(1)
 
         self.log()
 
     def run(self):
-        # If dameon, then create a new thread and wait for it
+        # If daemon, then create a new thread and wait for it
         if self.daemon:
-            print 'Daemonizing...'
+            print('Daemonizing...')
             self.run_daemon()
         else:
             # Run in foreground
@@ -384,7 +378,7 @@ if __name__ == '__main__':
                 main()
             except TypeError:
                 time.sleep(0.25)
-                print "Continue to start the Pyscanlogger"
+                print("Continue to start the Pyscanlogger")
                 continue
     except KeyboardInterrupt:
-        print "Stop the Pyscanlogger!"
+        print("Stop the Pyscanlogger!")
