@@ -1,9 +1,12 @@
+Another version of the pyscanlogger by John-Lin for a course project.
+Original repo can be found here: https://github.com/John-Lin/pyscanlogger/blob/master/pyscanlogger.py
+
 Pyscanlogger
 ============
 
 Pyscanlogger - Python Port scan detector
 
-A pure Python program to detect network port scanning attacks. Currently logs different TCP port scans. Can run in the background like a daemon and log attacks to a log file.
+A pure Python program to detect network port scanning attacks. Currently, logs different TCP port scans. Can run in the background like a daemon and log attacks to a log file.
 
 The latest code for this including some added features can be seen here http://code.google.com/p/pyscanlogd/
 
@@ -11,8 +14,8 @@ The latest code for this including some added features can be seen here http://c
 ----
 Pyscanlogger is dependent on pypcap and dpkt packages.
 
-- **pypcap** is availavle from https://pypi.python.org/pypi/pypcap
-- **dpkt** is availavle from http://code.google.com/p/dpkt/ 
+- **pypcap** is available from https://pypi.python.org/pypi/pypcap
+- **dpkt** is available from http://code.google.com/p/dpkt/ 
 
 
 ### Install
