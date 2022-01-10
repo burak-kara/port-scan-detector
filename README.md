@@ -1,4 +1,4 @@
-Another version of the pyscanlogger by John-Lin for a course project.
+Another version of the pyscanlogger by John-Lin for a course project. It is slightly simplified and converted to python3. 
 Original repo can be found here: https://github.com/John-Lin/pyscanlogger/blob/master/pyscanlogger.py
 
 ### Usage
