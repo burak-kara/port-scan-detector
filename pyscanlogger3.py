@@ -16,7 +16,7 @@ from datetime import datetime
 import optparse
 
 SCAN_TIMEOUT = 5  # as ms
-WEIGHT_THRESHOLD = 0
+WEIGHT_THRESHOLD = 25
 PIDFILE = "./pyscanlogger.pid"
 
 # tcp control flag constants
@@ -264,7 +264,7 @@ class ScanLogger(object):
             # Ports < 1024 can be used only by root
             # Therefore, they have more weight
             if dport < 1024:
-                scan.weight += 3
+                scan.weight += 2
             else:
                 scan.weight += 1
 
@@ -314,7 +314,7 @@ class ScanLogger(object):
             sys.exit(1)
 
         os.setsid()
-        os.umask(0)
+        # os.umask(0)
 
         # Second fork
         try:

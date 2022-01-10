@@ -55,3 +55,4 @@ target/
 
 .idea
 get-pip.py
+pyscanlogger.pid
